@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSignedUploadUrl, deleteFile } from "@/lib/storage";
+import { getSignedUploadUrl, deleteFile } from "@/lib/storage.server";
 import {
   generateEntrySlug,
   ensureUniqueSlug,

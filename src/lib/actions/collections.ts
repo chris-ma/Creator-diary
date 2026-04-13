@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { generateCollectionSlug, ensureUniqueSlug } from "@/lib/slugify";
-import { deleteFile } from "@/lib/storage";
+import { deleteFile } from "@/lib/storage.server";
 import type { Collection } from "@/types";
 
 export type CollectionFormData = {

@@ -1,6 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+// Pure URL utilities — safe to import from client components.
+// Server-only storage functions (getSignedUploadUrl, deleteFile) live in storage.server.ts
 
-const BUCKET = "travel-diary";
+export const BUCKET = "travel-diary";
+
 const TRANSFORM_ENABLED =
   process.env.NEXT_PUBLIC_SUPABASE_TRANSFORM_ENABLED === "true";
 
@@ -27,36 +29,4 @@ export function transformUrl(
   if (!TRANSFORM_ENABLED) return getPublicUrl(path);
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   return `${supabaseUrl}/storage/v1/render/image/public/${BUCKET}/${path}?width=${width}&quality=${quality}`;
-}
-
-/**
- * Generates a signed upload URL for direct browser-to-Supabase uploads.
- * Must be called server-side (Server Action).
- * Returns the signed URL and the final storage path.
- */
-export async function getSignedUploadUrl(
-  path: string
-): Promise<{ signedUrl: string; token: string }> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUploadUrl(path);
-
-  if (error || !data) {
-    throw new Error(`Failed to create signed upload URL: ${error?.message}`);
-  }
-
-  return { signedUrl: data.signedUrl, token: data.token };
-}
-
-/**
- * Deletes a file from storage.
- * Must be called server-side.
- */
-export async function deleteFile(path: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.storage.from(BUCKET).remove([path]);
-  if (error) {
-    throw new Error(`Failed to delete file: ${error.message}`);
-  }
 }
