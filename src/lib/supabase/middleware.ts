@@ -25,26 +25,31 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh session — important: do not add logic between createServerClient
-  // and supabase.auth.getUser()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    // Refresh session — important: do not add logic between createServerClient
+    // and supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
+    const path = request.nextUrl.pathname;
 
-  // Protect /admin routes
-  if (path.startsWith("/admin") && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
+    // Protect /admin routes
+    if (path.startsWith("/admin") && !user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
 
-  // Redirect logged-in users away from /login
-  if (path === "/login" && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin";
-    return NextResponse.redirect(url);
+    // Redirect logged-in users away from /login
+    if (path === "/login" && user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin";
+      return NextResponse.redirect(url);
+    }
+  } catch {
+    // If Supabase auth is unreachable, pass the request through.
+    // Public pages render without session; /admin will re-check in the layout.
   }
 
   return supabaseResponse;
