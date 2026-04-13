@@ -10,7 +10,7 @@ export async function getPublishedCollections(): Promise<Collection[]> {
     .order("display_order", { ascending: true })
     .order("start_date", { ascending: false });
 
-  if (error) throw new Error(error.message);
+  if (error) return [];
   return data ?? [];
 }
 
@@ -38,7 +38,7 @@ export async function getAllCollections(): Promise<Collection[]> {
     .order("display_order", { ascending: true })
     .order("created_at", { ascending: false });
 
-  if (error) throw new Error(error.message);
+  if (error) return [];
   return data ?? [];
 }
 

@@ -13,7 +13,7 @@ export async function getPublishedEntriesByCollection(
     .order("display_order", { ascending: true })
     .order("date", { ascending: true });
 
-  if (error) throw new Error(error.message);
+  if (error) return [];
   return data ?? [];
 }
 
@@ -45,7 +45,7 @@ export async function getRecentPublishedEntries(
     .order("date", { ascending: false })
     .limit(limit);
 
-  if (error) throw new Error(error.message);
+  if (error) return [];
   return (data ?? []) as EntryWithCollection[];
 }
 
@@ -57,7 +57,7 @@ export async function getAllEntries(): Promise<EntryWithCollection[]> {
     .select("*, collection:collections(id, title, slug)")
     .order("created_at", { ascending: false });
 
-  if (error) throw new Error(error.message);
+  if (error) return [];
   return (data ?? []) as EntryWithCollection[];
 }
 
