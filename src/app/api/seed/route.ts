@@ -151,7 +151,7 @@ async function fetchAndUploadImage(
   picsumId: number,
   storagePath: string
 ): Promise<void> {
-  const url = `https://picsum.photos/id/${picsumId}/1600/1200`;
+  const url = `https://picsum.photos/id/${picsumId}/800/600`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`picsum fetch failed for id ${picsumId}: ${res.status}`);
   const arrayBuffer = await res.arrayBuffer();
@@ -164,15 +164,20 @@ async function fetchAndUploadImage(
   if (error) throw new Error(`Storage upload failed for ${storagePath}: ${error.message}`);
 }
 
-export async function GET(_request: NextRequest) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+export const maxDuration = 60;
 
+export async function GET(_request: NextRequest) {
   const log: string[] = [];
 
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ ok: false, error: "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars" }, { status: 500 });
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
     // ── Japan Winter 2025 ─────────────────────────────────────────────────────
     const { data: existingJapan } = await supabase
       .from("collections")
