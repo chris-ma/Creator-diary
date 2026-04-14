@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const BUCKET = "travel-diary";
 
@@ -146,7 +146,8 @@ const PORTUGAL_ENTRIES: SeedEntry[] = [
 ];
 
 async function fetchAndUploadImage(
-  supabase: ReturnType<typeof createClient>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>,
   picsumId: number,
   storagePath: string
 ): Promise<void> {
