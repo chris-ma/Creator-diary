@@ -12,6 +12,7 @@ const TRANSFORM_ENABLED =
  * config changes, only this function needs updating.
  */
 export function getPublicUrl(path: string): string {
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   return `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${path}`;
 }

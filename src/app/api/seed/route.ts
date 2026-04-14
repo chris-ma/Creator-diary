@@ -1,11 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const BUCKET = "travel-diary";
+export const maxDuration = 60;
+
+// Picsum photo IDs used as seed images — stored as full URLs so no upload needed.
+// getPublicUrl() in storage.ts passes through any https:// path unchanged.
+function picsum(id: number): string {
+  return `https://picsum.photos/id/${id}/1200/900`;
+}
 
 type SeedEntry = {
   slug: string;
-  picsumId: number;
+  photo_path: string;
   date: string;
   location_name: string;
   country: string;
@@ -23,7 +29,7 @@ type SeedEntry = {
 const JAPAN_ENTRIES: SeedEntry[] = [
   {
     slug: "fushimi-inari-taisha-2025-01-14",
-    picsumId: 167,
+    photo_path: picsum(167),
     date: "2025-01-14",
     location_name: "Fushimi Inari Taisha",
     country: "Japan",
@@ -40,7 +46,7 @@ const JAPAN_ENTRIES: SeedEntry[] = [
   },
   {
     slug: "arashiyama-bamboo-grove-2025-01-16",
-    picsumId: 1018,
+    photo_path: picsum(1018),
     date: "2025-01-16",
     location_name: "Arashiyama Bamboo Grove",
     country: "Japan",
@@ -57,7 +63,7 @@ const JAPAN_ENTRIES: SeedEntry[] = [
   },
   {
     slug: "kinkaku-ji-golden-pavilion-2025-01-17",
-    picsumId: 552,
+    photo_path: picsum(552),
     date: "2025-01-17",
     location_name: "Kinkaku-ji",
     country: "Japan",
@@ -74,7 +80,7 @@ const JAPAN_ENTRIES: SeedEntry[] = [
   },
   {
     slug: "shibuya-crossing-at-dusk-2025-01-20",
-    picsumId: 325,
+    photo_path: picsum(325),
     date: "2025-01-20",
     location_name: "Shibuya Crossing",
     country: "Japan",
@@ -94,7 +100,7 @@ const JAPAN_ENTRIES: SeedEntry[] = [
 const PORTUGAL_ENTRIES: SeedEntry[] = [
   {
     slug: "alfama-viewpoint-2026-03-08",
-    picsumId: 336,
+    photo_path: picsum(336),
     date: "2026-03-08",
     location_name: "Portas do Sol Viewpoint, Alfama",
     country: "Portugal",
@@ -111,7 +117,7 @@ const PORTUGAL_ENTRIES: SeedEntry[] = [
   },
   {
     slug: "sintra-pena-palace-2026-03-10",
-    picsumId: 403,
+    photo_path: picsum(403),
     date: "2026-03-10",
     location_name: "Palácio Nacional da Pena, Sintra",
     country: "Portugal",
@@ -128,7 +134,7 @@ const PORTUGAL_ENTRIES: SeedEntry[] = [
   },
   {
     slug: "porto-ribeira-sunset-2026-03-13",
-    picsumId: 374,
+    photo_path: picsum(374),
     date: "2026-03-13",
     location_name: "Ribeira, Porto",
     country: "Portugal",
@@ -145,203 +151,112 @@ const PORTUGAL_ENTRIES: SeedEntry[] = [
   },
 ];
 
-async function fetchAndUploadImage(
+async function seedCollection(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any, any, any>,
-  picsumId: number,
-  storagePath: string
+  slug: string,
+  insert: Record<string, unknown>,
+  entries: SeedEntry[],
+  log: string[]
 ): Promise<void> {
-  const url = `https://picsum.photos/id/${picsumId}/800/600`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`picsum fetch failed for id ${picsumId}: ${res.status}`);
-  const arrayBuffer = await res.arrayBuffer();
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, arrayBuffer, {
-      contentType: "image/jpeg",
-      upsert: true,
+  const { data: existing } = await supabase
+    .from("collections")
+    .select("id")
+    .eq("slug", slug)
+    .single();
+
+  let collectionId: string;
+
+  if (existing) {
+    collectionId = existing.id;
+    log.push(`Collection '${slug}' already exists, skipping`);
+  } else {
+    const { data, error } = await supabase
+      .from("collections")
+      .insert(insert)
+      .select("id")
+      .single();
+    if (error || !data) throw new Error(`Failed to create collection '${slug}': ${error?.message}`);
+    collectionId = data.id;
+    log.push(`Created collection: ${insert.title}`);
+  }
+
+  for (const entry of entries) {
+    const { data: existingEntry } = await supabase
+      .from("entries")
+      .select("id")
+      .eq("collection_id", collectionId)
+      .eq("slug", entry.slug)
+      .single();
+
+    if (existingEntry) {
+      log.push(`Entry '${entry.slug}' already exists, skipping`);
+      continue;
+    }
+
+    const { error } = await supabase.from("entries").insert({
+      ...entry,
+      collection_id: collectionId,
+      is_published: true,
     });
-  if (error) throw new Error(`Storage upload failed for ${storagePath}: ${error.message}`);
+    if (error) throw new Error(`Failed to create entry '${entry.slug}': ${error.message}`);
+    log.push(`Created entry: ${entry.location_name}`);
+  }
 }
 
-export const maxDuration = 60;
-
-export async function GET(_request: NextRequest) {
+export async function GET() {
   const log: string[] = [];
 
   try {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return NextResponse.json({ ok: false, error: "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars" }, { status: 500 });
+      return NextResponse.json(
+        { ok: false, error: "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" },
+        { status: 500 }
+      );
     }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
-    // ── Japan Winter 2025 ─────────────────────────────────────────────────────
-    const { data: existingJapan } = await supabase
-      .from("collections")
-      .select("id")
-      .eq("slug", "japan-winter-2025")
-      .single();
 
-    let japanId: string;
-
-    if (existingJapan) {
-      japanId = existingJapan.id;
-      log.push("Collection 'japan-winter-2025' already exists, skipping insert");
-    } else {
-      // Upload cover image
-      await fetchAndUploadImage(
-        supabase,
-        167,
-        "collections/japan-winter-2025/cover.jpg"
-      );
-      log.push("Uploaded Japan cover image");
-
-      const { data: japanCol, error: japanErr } = await supabase
-        .from("collections")
-        .insert({
-          title: "Japan Winter 2025",
-          slug: "japan-winter-2025",
-          cover_image: "collections/japan-winter-2025/cover.jpg",
-          description:
-            "Two weeks in Japan during January — trading summer crowds for frost-tipped temples, near-empty bamboo groves, and the particular quiet of a Kyoto morning under a low grey sky.",
-          start_date: "2025-01-12",
-          end_date: "2025-01-26",
-          location_summary: "Kyoto · Tokyo · Nara",
-          is_published: true,
-          display_order: 1,
-        })
-        .select("id")
-        .single();
-
-      if (japanErr || !japanCol) throw new Error(`Failed to create Japan collection: ${japanErr?.message}`);
-      japanId = japanCol.id;
-      log.push("Created collection: Japan Winter 2025");
-    }
-
-    // Japan entries
-    for (const entry of JAPAN_ENTRIES) {
-      const { data: existing } = await supabase
-        .from("entries")
-        .select("id")
-        .eq("collection_id", japanId)
-        .eq("slug", entry.slug)
-        .single();
-
-      if (existing) {
-        log.push(`Entry '${entry.slug}' already exists, skipping`);
-        continue;
-      }
-
-      const storagePath = `entries/${japanId}/${entry.slug}.jpg`;
-      await fetchAndUploadImage(supabase, entry.picsumId, storagePath);
-
-      const { error: entryErr } = await supabase.from("entries").insert({
-        collection_id: japanId,
-        slug: entry.slug,
-        photo_path: storagePath,
-        date: entry.date,
-        location_name: entry.location_name,
-        country: entry.country,
-        camera_body: entry.camera_body,
-        lens: entry.lens,
-        aperture: entry.aperture,
-        shutter_speed: entry.shutter_speed,
-        iso: entry.iso,
-        focal_length: entry.focal_length,
-        description: entry.description,
-        tags: entry.tags,
-        display_order: entry.display_order,
+    await seedCollection(
+      supabase,
+      "japan-winter-2025",
+      {
+        title: "Japan Winter 2025",
+        slug: "japan-winter-2025",
+        cover_image: picsum(167),
+        description:
+          "Two weeks in Japan during January — trading summer crowds for frost-tipped temples, near-empty bamboo groves, and the particular quiet of a Kyoto morning under a low grey sky.",
+        start_date: "2025-01-12",
+        end_date: "2025-01-26",
+        location_summary: "Kyoto · Tokyo · Nara",
         is_published: true,
-      });
+        display_order: 1,
+      },
+      JAPAN_ENTRIES,
+      log
+    );
 
-      if (entryErr) throw new Error(`Failed to create entry '${entry.slug}': ${entryErr.message}`);
-      log.push(`Created entry: ${entry.location_name}`);
-    }
-
-    // ── Portugal Spring 2026 ──────────────────────────────────────────────────
-    const { data: existingPortugal } = await supabase
-      .from("collections")
-      .select("id")
-      .eq("slug", "portugal-spring-2026")
-      .single();
-
-    let portugalId: string;
-
-    if (existingPortugal) {
-      portugalId = existingPortugal.id;
-      log.push("Collection 'portugal-spring-2026' already exists, skipping insert");
-    } else {
-      await fetchAndUploadImage(
-        supabase,
-        336,
-        "collections/portugal-spring-2026/cover.jpg"
-      );
-      log.push("Uploaded Portugal cover image");
-
-      const { data: ptCol, error: ptErr } = await supabase
-        .from("collections")
-        .insert({
-          title: "Portugal Spring 2026",
-          slug: "portugal-spring-2026",
-          cover_image: "collections/portugal-spring-2026/cover.jpg",
-          description:
-            "A ten-day loop through Lisbon, Sintra, and Porto in early spring — before the tourist season peaks and the mimosa is still in bloom. Slow mornings, strong coffee, and light that turns everything amber.",
-          start_date: "2026-03-06",
-          end_date: "2026-03-16",
-          location_summary: "Lisbon · Sintra · Porto",
-          is_published: true,
-          display_order: 2,
-        })
-        .select("id")
-        .single();
-
-      if (ptErr || !ptCol) throw new Error(`Failed to create Portugal collection: ${ptErr?.message}`);
-      portugalId = ptCol.id;
-      log.push("Created collection: Portugal Spring 2026");
-    }
-
-    // Portugal entries
-    for (const entry of PORTUGAL_ENTRIES) {
-      const { data: existing } = await supabase
-        .from("entries")
-        .select("id")
-        .eq("collection_id", portugalId)
-        .eq("slug", entry.slug)
-        .single();
-
-      if (existing) {
-        log.push(`Entry '${entry.slug}' already exists, skipping`);
-        continue;
-      }
-
-      const storagePath = `entries/${portugalId}/${entry.slug}.jpg`;
-      await fetchAndUploadImage(supabase, entry.picsumId, storagePath);
-
-      const { error: entryErr } = await supabase.from("entries").insert({
-        collection_id: portugalId,
-        slug: entry.slug,
-        photo_path: storagePath,
-        date: entry.date,
-        location_name: entry.location_name,
-        country: entry.country,
-        camera_body: entry.camera_body,
-        lens: entry.lens,
-        aperture: entry.aperture,
-        shutter_speed: entry.shutter_speed,
-        iso: entry.iso,
-        focal_length: entry.focal_length,
-        description: entry.description,
-        tags: entry.tags,
-        display_order: entry.display_order,
+    await seedCollection(
+      supabase,
+      "portugal-spring-2026",
+      {
+        title: "Portugal Spring 2026",
+        slug: "portugal-spring-2026",
+        cover_image: picsum(336),
+        description:
+          "A ten-day loop through Lisbon, Sintra, and Porto in early spring — before the tourist season peaks and the mimosa is still in bloom. Slow mornings, strong coffee, and light that turns everything amber.",
+        start_date: "2026-03-06",
+        end_date: "2026-03-16",
+        location_summary: "Lisbon · Sintra · Porto",
         is_published: true,
-      });
-
-      if (entryErr) throw new Error(`Failed to create entry '${entry.slug}': ${entryErr.message}`);
-      log.push(`Created entry: ${entry.location_name}`);
-    }
+        display_order: 2,
+      },
+      PORTUGAL_ENTRIES,
+      log
+    );
 
     return NextResponse.json({ ok: true, log });
   } catch (err) {
