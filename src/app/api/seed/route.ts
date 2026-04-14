@@ -164,12 +164,7 @@ async function fetchAndUploadImage(
   if (error) throw new Error(`Storage upload failed for ${storagePath}: ${error.message}`);
 }
 
-export async function GET(request: NextRequest) {
-  const secret = request.nextUrl.searchParams.get("secret");
-  if (!process.env.SEED_SECRET || secret !== process.env.SEED_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function GET(_request: NextRequest) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
