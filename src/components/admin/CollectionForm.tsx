@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ImageUploader } from "./ImageUploader";
+import { RichTextEditor } from "./RichTextEditor";
 import { Button } from "@/components/ui/Button";
 import {
   createCollection,
@@ -131,12 +132,10 @@ export function CollectionForm({ collection }: Props) {
 
       <section>
         <Field label="Description (optional)">
-          <textarea
-            rows={4}
-            placeholder="A quiet set of winter photographs…"
+          <RichTextEditor
             value={fields.description ?? ""}
-            onChange={(e) => set("description", e.target.value)}
-            className={`${inputCls} resize-none`}
+            onChange={(html) => set("description", html)}
+            placeholder="A quiet set of winter photographs…"
           />
         </Field>
       </section>

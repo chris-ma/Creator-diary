@@ -28,9 +28,10 @@ export function EntryCard({ entry }: Props) {
       <div className="flex-1 min-w-0">
         <EntryMeta entry={entry} />
         {entry.description && (
-          <p className="text-sm text-ink-muted mt-2 line-clamp-2">
-            {entry.description}
-          </p>
+          <div
+            className="diary-prose diary-prose--muted mt-2 line-clamp-2 text-sm"
+            dangerouslySetInnerHTML={{ __html: entry.description }}
+          />
         )}
         {entry.collection && (
           <Link

@@ -105,9 +105,10 @@ export default async function EntryDetailPage({ params }: Props) {
           <EntryMeta entry={entry} />
 
           {entry.description && (
-            <p className="text-sm text-ink-light mt-6 leading-relaxed">
-              {entry.description}
-            </p>
+            <div
+              className="diary-prose mt-6"
+              dangerouslySetInnerHTML={{ __html: entry.description }}
+            />
           )}
 
           <div className="mt-6 space-y-3">

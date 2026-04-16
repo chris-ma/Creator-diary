@@ -78,9 +78,10 @@ export default async function CollectionDetailPage({ params }: Props) {
           <p className="text-xs text-ink-muted mt-1">{dateRange}</p>
         )}
         {collection.description && (
-          <p className="text-sm text-ink-light mt-4 max-w-xl leading-relaxed">
-            {collection.description}
-          </p>
+          <div
+            className="diary-prose mt-4 max-w-xl"
+            dangerouslySetInnerHTML={{ __html: collection.description }}
+          />
         )}
       </div>
 
@@ -110,9 +111,10 @@ export default async function CollectionDetailPage({ params }: Props) {
                   </Link>
                   <EntryMeta entry={entry} />
                   {entry.description && (
-                    <p className="text-sm text-ink-muted mt-3 max-w-xl leading-relaxed">
-                      {entry.description}
-                    </p>
+                    <div
+                      className="diary-prose diary-prose--muted mt-3 max-w-xl line-clamp-3"
+                      dangerouslySetInnerHTML={{ __html: entry.description }}
+                    />
                   )}
                 </article>
               );

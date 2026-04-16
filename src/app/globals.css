@@ -19,3 +19,43 @@
     text-wrap: balance;
   }
 }
+
+/* ProseMirror (Tiptap) — remove default focus outline; border-change on wrapper handles focus */
+.ProseMirror {
+  outline: none;
+}
+
+@layer components {
+  /* Rendered HTML from the WYSIWYG editor */
+  .diary-prose {
+    @apply text-sm text-ink-light leading-relaxed;
+  }
+  .diary-prose h2 {
+    @apply text-base font-light tracking-wide text-ink mt-4 mb-1;
+  }
+  .diary-prose h3 {
+    @apply text-sm font-normal tracking-wide text-ink mt-3 mb-1;
+  }
+  .diary-prose p {
+    @apply mt-2;
+  }
+  .diary-prose p:first-child {
+    @apply mt-0;
+  }
+  .diary-prose ul {
+    @apply list-disc list-outside pl-5 mt-2 space-y-1;
+  }
+  .diary-prose ol {
+    @apply list-decimal list-outside pl-5 mt-2 space-y-1;
+  }
+  .diary-prose blockquote {
+    @apply border-l-2 border-ink/20 pl-4 italic text-ink-muted mt-3;
+  }
+  .diary-prose strong {
+    @apply font-medium text-ink;
+  }
+  /* Muted variant for feed and card contexts */
+  .diary-prose--muted {
+    @apply text-ink-muted;
+  }
+}

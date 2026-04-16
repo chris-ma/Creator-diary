@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ImageUploader } from "./ImageUploader";
+import { RichTextEditor } from "./RichTextEditor";
 import { Button } from "@/components/ui/Button";
 import { createEntry, updateEntry, type EntryFormData } from "@/lib/actions/entries";
 import type { Collection, Entry, ExifData } from "@/types";
@@ -234,12 +235,10 @@ export function EntryForm({ collections, entry, defaultCollectionId }: Props) {
 
       <section>
         <Field label="Description (optional)">
-          <textarea
-            rows={5}
-            placeholder="A brief diary note about this moment…"
+          <RichTextEditor
             value={fields.description ?? ""}
-            onChange={(e) => set("description", e.target.value)}
-            className={`${inputCls} resize-none`}
+            onChange={(html) => set("description", html)}
+            placeholder="A brief diary note about this moment…"
           />
         </Field>
       </section>

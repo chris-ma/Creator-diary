@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { getPublicUrl, transformUrl } from "@/lib/storage";
 
+/** Strip HTML tags from a rich-text description for use in OG meta tags. */
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
 const SITE_NAME = "Travel Photo Diary";
 const SITE_DESCRIPTION =
   "A minimalist archive of places, moments, and light.";
@@ -35,17 +40,17 @@ export function collectionMetadata(opts: {
     : undefined;
   return {
     title: opts.title,
-    description: opts.description ?? undefined,
+    description: opts.description ? stripHtml(opts.description) : undefined,
     openGraph: {
       title: opts.title,
-      description: opts.description ?? undefined,
+      description: opts.description ? stripHtml(opts.description) : undefined,
       type: "website",
       images: imageUrl ? [{ url: imageUrl, width: 1200 }] : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title: opts.title,
-      description: opts.description ?? undefined,
+      description: opts.description ? stripHtml(opts.description) : undefined,
       images: imageUrl ? [imageUrl] : undefined,
     },
   };
@@ -63,10 +68,10 @@ export function entryMetadata(opts: {
   const imageUrl = transformUrl(opts.photoPath, 1200, 80);
   return {
     title: title || "Entry",
-    description: opts.description ?? undefined,
+    description: opts.description ? stripHtml(opts.description) : undefined,
     openGraph: {
       title: title || "Entry",
-      description: opts.description ?? undefined,
+      description: opts.description ? stripHtml(opts.description) : undefined,
       type: "article",
       images: [{ url: imageUrl, width: 1200 }],
     },
